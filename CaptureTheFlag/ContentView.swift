@@ -15,6 +15,14 @@ struct ContentView: View {
     @State private var showingScore = false
     @State private var scoreTitle = ""
     
+    @State private var correctAnimationAmount = 0.0
+    
+    @State private var wrongAnimationAmount = 1.0
+    
+    @State private var wrongAttemptAnimation = [0,0,0]
+    
+    @State private var shakeOffset = CGFloat(0.0)
+    
     // Add an @State property to store the user’s score, modify it when they get an answer right or wrong, then display it in the alert.
     @State private var score = 0
 
@@ -35,6 +43,9 @@ struct ContentView: View {
             }) {
                 FlagImage(name: self.countries[number])
             }
+            .rotation3DEffect(.degrees(number == correctAnswer ? correctAnimationAmount: 0), axis: (x: 0, y: 1, z: 0))
+            .opacity(number != correctAnswer ? 2 - wrongAnimationAmount :  1.0)
+            .modifier(Shake(animatableData: CGFloat(wrongAttemptAnimation[number])))
             
             Spacer()
         }
@@ -52,18 +63,29 @@ struct ContentView: View {
         if number == correctAnswer {
             scoreTitle = "Correct!"
             score += 1
+            withAnimation(.linear(duration: 0.5)) {
+                self.correctAnimationAmount += 360
+                self.wrongAnimationAmount += 0.75
+            }
         }
         else {
             //When someone chooses the wrong flag, tell them their mistake in your alert message – something like “Wrong! That’s the flag of France,” for example.
             scoreTitle = "Wrong! Thats the flag of \(countries[number])"
             score = score - 1
+            withAnimation(.default) {
+                wrongAttemptAnimation[number] += 1
+            }
         }
+
         showingScore = true
     }
     
     func askQuestion() {
         countries.shuffle()
         correctAnswer = Int.random(in: 0...2)
+        wrongAnimationAmount = 1
+        correctAnimationAmount = 0
+        wrongAttemptAnimation = [0, 0, 0]
     }
 }
 
@@ -77,6 +99,19 @@ struct FlagImage: View {
             .clipShape(Capsule())
             .overlay(Capsule().stroke(Color.black, lineWidth: 1))
             .shadow(color: .black, radius: 2)
+    }
+}
+
+/// shake modifier
+struct Shake: GeometryEffect {
+    var amount: CGFloat = 10
+    var shakesPerUnit = 3
+    var animatableData: CGFloat
+
+    func effectValue(size: CGSize) -> ProjectionTransform {
+        ProjectionTransform(CGAffineTransform(translationX:
+            amount * sin(animatableData * .pi * CGFloat(shakesPerUnit)),
+            y: 0))
     }
 }
 
